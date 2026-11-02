@@ -1,0 +1,53 @@
+groups:
+  - name: system_alerts
+    interval: 30s
+    rules:
+      - alert: HighCpuLoad
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Высокая нагрузка CPU на {{ $labels.instance }}"
+          description: "CPU загрузка превышает 80% в течение 5 минут. Текущее значение: {{ printf \"%.2f\" $value }}%."
+
+      - alert: HighCpuLoadCritical
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Критическая нагрузка CPU на {{ $labels.instance }}"
+          description: "CPU загрузка превышает 95% в течение 2 минут. Текущее значение: {{ printf \"%.2f\" $value }}%."
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          component: storage
+        annotations:
+          summary: "Мало места на диске {{ $labels.mountpoint }} ({{ $labels.instance }})"
+          description: "Свободно менее 10% на разделе {{ $labels.mountpoint }}. Текущее значение: {{ printf \"%.2f\" $value }}%."
+
+      - alert: DiskSpaceWarning
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) * 100 < 20
+        for: 10m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "Заканчивается место на диске {{ $labels.mountpoint }}"
+          description: "Свободно менее 20% на разделе {{ $labels.mountpoint }}. Текущее значение: {{ printf \"%.2f\" $value }}%."
+
+      - alert: InstanceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: availability
+        annotations:
+          summary: "Инстанс {{ $labels.instance }} недоступен"
+          description: "Экспортёр {{ $labels.job }} на {{ $labels.instance }} не отвечает более 2 минут."
